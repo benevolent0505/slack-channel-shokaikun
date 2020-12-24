@@ -2,15 +2,41 @@
 const spreadSheetId = PropertiesService.getScriptProperties().getProperty('SPREAD_SHEET_ID');
 const webhookUrl = PropertiesService.getScriptProperties().getProperty('SLACK_WEBHOOK_URL');
 
-// define functions
-const removeHeader = (values: string[][]) => {
-  values.shift();
-  return values;
+type RowType = {
+  rowNumber: number
+  channelId: string;
+  description: string;
+  lastSelectedAt: number | undefined;
+}
+
+const convertRowToRowType = (row: string[], index: number) => {
+  let lastSelectedAt = undefined;
+  if (row[2].length > 0) {
+    lastSelectedAt = Date.parse(row[2])
+  }
+
+  // 2 is plus origin
+  return { rowNumber: index + 2, channelId: row[0], description: row[1], lastSelectedAt };
 };
 
-const choiceChannelAndDescription = (value: string[][]) => {
-  const chooseRow = value[Math.floor(Math.random() * value.length)]
-  return [chooseRow[0], chooseRow[1]];
+const getSelectedRowNumber = (rows: RowType[]) => {
+  const randomSelect = (rows: RowType[]) =>
+    rows[Math.floor(Math.random() * rows.length)];
+
+  // select logic
+  // 1. never selected channels
+  const neverSelected = rows.filter(row => row.lastSelectedAt === undefined);
+  let selected = randomSelect(neverSelected);
+  if (selected) { return selected; }
+
+  // 2. last selected 1 month ago
+  const oneMonthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const lastSeleted = rows.filter(row => row.lastSelectedAt < oneMonthAgo);
+  selected = randomSelect(lastSeleted);
+  if (selected) { return selected; }
+
+  // 3. other
+  return randomSelect(rows);
 };
 
 const constructShokaiMessage = (channelId: string, description: string) => {
@@ -47,12 +73,18 @@ const postSlack = (payload: object) => {
 
 // running function
 const run = () => {
-  const sheet = SpreadsheetApp.openById(spreadSheetId);
-  const sheetValues = sheet.getDataRange().getValues();
+  const ss = SpreadsheetApp.openById(spreadSheetId);
+  const sheet = ss.getSheets()[0];
 
-  const channels = removeHeader(sheetValues);
-  const [channelId, description] = choiceChannelAndDescription(channels);
-  const shokaiMessage = constructShokaiMessage(channelId, description);
+  const channelCount = sheet.getRange('A:A').getValues().filter(cell => cell[0].length > 0).length - 1  // subtract by header num;
+
+  const channelRows = sheet.getRange(`A2:C${channelCount}`).getValues().map(convertRowToRowType);
+  const selectedRow = getSelectedRowNumber(channelRows);
+
+  const shokaiMessage = constructShokaiMessage(selectedRow.channelId, selectedRow.description);
+
+  const today = new Date();
+  sheet.getRange(`C${selectedRow.rowNumber}`).setValue(today.toISOString());
 
   const payload = constructSlackWebhookPayload(shokaiMessage);
   postSlack(payload);
