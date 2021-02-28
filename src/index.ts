@@ -78,7 +78,7 @@ const run = () => {
 
   const channelCount = sheet.getRange('A:A').getValues().filter(cell => cell[0].length > 0).length - 1  // subtract by header num;
 
-  const channelRows = sheet.getRange(`A2:C${channelCount}`).getValues().map(convertRowToRowType);
+  const channelRows = sheet.getRange(`A2:C${channelCount+1}`).getValues().map(convertRowToRowType);
   const selectedRow = getSelectedRowNumber(channelRows);
 
   const shokaiMessage = constructShokaiMessage(selectedRow.channelId, selectedRow.description);
