@@ -43,7 +43,7 @@ const constructShokaiMessage = (channelId: string, description: string) => {
   return `こんなチャンネルもあります :point_right: <#${channelId}>
 一言紹介 : ${description}
 
-紹介するチャンネルは<https://docs.google.com/spreadsheets/d/${spreadSheetId}/edit#gid=0|ここ>で編集できます。`;
+紹介するチャンネルの追加・編集は<https://docs.google.com/spreadsheets/d/${spreadSheetId}/edit#gid=0|このスプレッドシート>から自由にどうぞ。`;
 };
 
 const constructSlackWebhookPayload = (text: string) => {
@@ -78,7 +78,7 @@ const run = () => {
 
   const channelCount = sheet.getRange('A:A').getValues().filter(cell => cell[0].length > 0).length - 1  // subtract by header num;
 
-  const channelRows = sheet.getRange(`A2:C${channelCount+1}`).getValues().map(convertRowToRowType);
+  const channelRows = sheet.getRange(`A2:C${channelCount + 1}`).getValues().map(convertRowToRowType);
   const selectedRow = getSelectedRowNumber(channelRows);
 
   const shokaiMessage = constructShokaiMessage(selectedRow.channelId, selectedRow.description);
